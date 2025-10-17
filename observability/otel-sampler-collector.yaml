@@ -1,0 +1,57 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-sampler
+spec:
+  mode: daemonset
+  image: otel/opentelemetry-collector-contrib:0.133.0
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: {}
+          http: {}
+
+    processors:
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 500
+        policies: [
+            {
+              # Do not sample calls to actuator and swagger
+              name: actuator-swagger-routes,
+              type: string_attribute,
+              string_attribute:
+                {
+                  key: url.path,
+                  values: [\/actuator.*, \/swagger-ui.*],
+                  enabled_regex_matching: true,
+                  invert_match: true,
+                },
+            },
+            {
+              # Always sample errors
+              name: errors-policy,
+              type: status_code,
+              status_code: { status_codes: [ERROR] },
+            },
+            {
+              # Sample 10% of successful requests
+              name: randomized-policy,
+              type: probabilistic,
+              probabilistic: { sampling_percentage: 10 },
+            },
+          ]
+
+    exporters:
+      otlp/signoz:
+        endpoint: signoz-otel-collector.observability:4317
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [tail_sampling]
+          exporters: [otlp/signoz]

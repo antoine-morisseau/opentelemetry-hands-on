@@ -1,6 +1,8 @@
 package tech.ippon.formation.microservices.order.services;
 
 import java.io.IOException;
+
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -25,6 +27,7 @@ public class OrderService {
     this.shoppingCartClient = shoppingCartClient;
   }
 
+  @WithSpan("Create Order")
   public void createOrder(Order order) {
     final Response<ShoppingCart> response;
     try {

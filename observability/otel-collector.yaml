@@ -18,6 +18,15 @@ spec:
         endpoint: signoz-otel-collector.observability:4317
         tls:
           insecure: true
+      loadbalancing: # Introducing the loadbalancer exporter that can route traces to the same collector based on a routing_key
+        routing_key: "traceID"
+        protocol:
+          otlp:
+            tls:
+              insecure: true
+        resolver:
+          dns:
+            hostname: otel-sampler-collector-headless
 
     service: # Configure each pipeline of Open Telemetry data.
       pipelines:
@@ -26,7 +35,7 @@ spec:
           exporters: [otlp/signoz]
         traces:
           receivers: [otlp]
-          exporters: [otlp/signoz]
+          exporters: [loadbalancing]
         metrics:
           receivers: [otlp]
           exporters: [otlp/signoz]
